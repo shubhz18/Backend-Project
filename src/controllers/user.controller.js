@@ -158,7 +158,7 @@ const loginUser   = asyncHandler(async (req, res) => {
         .status(200)
         .cookie("AccessToken", accessToken, options)
         .cookie("RefreshToken", refreshToken, options)
-        .header("Authorization", `Bearer ${token}`)
+        .header("Authorization", `Bearer ${accessToken}`)
         .json(
             new ApiResponse(
                 200,
@@ -247,7 +247,7 @@ const LogoutUser  = asyncHandler(async (req, res) => {
     }
   })
 
-const UpdatePasswords=asyncHandle(async(req,res)=>
+const UpdatePasswords=asyncHandler(async(req,res)=>
 {
     const {oldPassword,NewPassword}=req.body;
     const user=await User.findById(req.user._id)
@@ -265,14 +265,19 @@ const UpdatePasswords=asyncHandle(async(req,res)=>
     user.save();
 
     return res.status(200)
-    .json(new ApiResponse(200,{},"Password Chnages Sucessfully"))
+    .json(new ApiResponse(200,{},"Password Changes Sucessfully"))
 })
+
 
 const UpdateDetails=asyncHandler(async(req,res)=>
 {
    const {fullName,email}=req.body;
 
    const user=await User.findById(req.user._id)
+   if(fullName===user.fullName && email===user.email)
+   {
+       throw new ApiError(400,"No changes detected")
+   }
    if(!user)
    {
     throw new ApiError(404,"User not found")
@@ -299,11 +304,17 @@ const UpdateDetails=asyncHandler(async(req,res)=>
 
 const AvatarUpdate=asyncHandler(async(req,res)=>
 {
-     const avatarLocalPath=await req.file?.path
-
+    if (!req.files) {
+        throw new ApiError(400, "No file uploaded");
+      }
+    
+      if (!req.files?.Avatar) {
+        throw new ApiError(400, "File name should be 'Avatar'");
+      }
+    const avatarLocalPath = req.files?.Avatar?.[0]?.path;
      if(!avatarLocalPath)
      {
-        throw new ApiError(400,"Avatar image is required")
+        throw new ApiError(400,"Avatar image is required while updating")
      }
 
      const Avatar=await uploadOnCloudinary(avatarLocalPath)
@@ -324,6 +335,7 @@ const AvatarUpdate=asyncHandler(async(req,res)=>
     return res.status(200)
     .json(new ApiResponse(200,user,"Avatar updated successfully"))
 })
+
 
 const UpdateCoverImage=asyncHandler(async(req,res)=>{
 
