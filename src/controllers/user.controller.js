@@ -1,10 +1,12 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { User } from "../models/user.models.js";
+
 import { upload } from "../middlewares/multer.middleware.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
+import { verifyJWT } from "../middlewares/auth.middleware.js";
 
 
 const generateAccessAndRefreshTokens=async(userId)=>
@@ -80,9 +82,9 @@ const generateAccessAndRefreshTokens=async(userId)=>
 //     );
 // });
 const registerUser = asyncHandler(async (req, res) => {
-    const { fullname, email, username, password } = req.body;
+    const { fullName, email, username, password } = req.body;
 
-    if ([fullname, email, username, password].some((field) => field?.trim() === "")) {
+    if ([fullName, email, username, password].some((field) => field?.trim() === "")) {
         throw new ApiError(400, "All fields are required");
     }
 
@@ -91,7 +93,9 @@ const registerUser = asyncHandler(async (req, res) => {
         throw new ApiError(409, "User already exists");
     }
     
-    console.log(req.files);
+    // console.log(req.files);
+    console.log("hello world");
+    console.log(req.body);
     const avatarLocalPath = req.files?.Avatar?.[0]?.path;
     // const coverImageLocalPath = req.files?.coverImage?.[0]?.path;
  
@@ -109,7 +113,7 @@ const registerUser = asyncHandler(async (req, res) => {
     const coverImage = coverImageLocalPath ? await uploadOnCloudinary(coverImageLocalPath) : null;
 
     const user = await User.create({
-        fullName: fullname,
+        fullName: fullName,
         email,
         username: username.toLowerCase(),
         password,

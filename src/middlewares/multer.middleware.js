@@ -16,6 +16,7 @@ const fileFilter = (req, file, cb) => {
     cb(null, false);
   }
 }
+console.log("hello");
 
 export const upload = multer({
   storage,
