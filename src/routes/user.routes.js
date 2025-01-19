@@ -22,7 +22,7 @@ router.route("/register").post(
     ]),
     registerUser)
 
-router.route("/login").post(loginUser)
+    router.route("/login").post(upload.fields([{ name: 'Avatar' }, { name: 'coverImage' }]), loginUser);
 
 //secure routes
 router.route("/logout").post(verifyJWT,LogoutUser)
