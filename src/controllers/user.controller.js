@@ -14,8 +14,12 @@ const generateAccessAndRefreshTokens=async(userId)=>
     try
     {
         const  user  =await User.findById(userId)
-        const accessToken=user.generateAccessToken()
-        const refreshToken=user.generateRefreshToken()
+        const accessToken=user.generateAccessToken();
+
+        
+        const refreshToken=user.generateRefreshToken();
+    
+
 
         user.refreshToken=refreshToken
         await user.save({validateBeforeSave:false})
@@ -30,7 +34,6 @@ const generateAccessAndRefreshTokens=async(userId)=>
     }
 }
 
-//     const { fullname, email, username, password } = req.body;
 
 //     // Validate required fields
 //     if ([fullname, email, username, password].some((field) => field?.trim() === "")) {
@@ -94,8 +97,8 @@ const registerUser = asyncHandler(async (req, res) => {
     }
     
     // console.log(req.files);
-    console.log("hello world");
-    console.log(req.body);
+    // console.log("hello world");
+    // console.log(req.body);
     const avatarLocalPath = req.files?.Avatar?.[0]?.path;
     // const coverImageLocalPath = req.files?.coverImage?.[0]?.path;
  
@@ -132,10 +135,28 @@ const loginUser   = asyncHandler(async (req, res) => {
     if (!(username || email)) {
         throw new ApiError(400, "Username or email is required");
     }
-
-    const user = await User.findOne({
+    let user;
+    if(username && !email)
+    {
+        user=await User.findOne({username:username})
+    }
+    else if(email && !username)
+     {
+         user=await User.findOne({email:email})
+     }
+     else
+     {
+    user = await User.findOne({
         $or: [{ username }, { email }]
-    });
+     })};
+
+     if (user) {
+        if ((username && user.username !== username) || (email && user.email !== email)) {
+            throw new ApiError(409, "Invalid credentials");
+        }
+    } else {
+        throw new ApiError(404, "User not found");
+    }
 
     if (!user) {
         throw new ApiError(404, "User   not found");
@@ -147,7 +168,8 @@ const loginUser   = asyncHandler(async (req, res) => {
     }
 
     const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(user._id);
-
+    // console.log("backend access token ",accessToken)
+    // console.log("backend refresh token ",refreshToken)
     const loggedInUser   = await User.findById(user._id).select("-password -refreshToken");
 
     // Convert Mongoose document to a plain object
@@ -155,8 +177,11 @@ const loginUser   = asyncHandler(async (req, res) => {
 
     const options = {
         httpOnly: true,
-        secure: true
+        secure: false, // Set to false for local development
+        sameSite: 'Lax',
+        path: '/' 
     };
+    console.log('Setting cookies:', { AccessToken: accessToken, RefreshToken: refreshToken });
 
     return res
         .status(200)
@@ -179,6 +204,7 @@ const loginUser   = asyncHandler(async (req, res) => {
 });
 
 const LogoutUser  = asyncHandler(async (req, res) => {
+    console.log("enter LogoutUser")
     try {
       await User.findByIdAndUpdate(
         req.user._id,
@@ -194,8 +220,8 @@ const LogoutUser  = asyncHandler(async (req, res) => {
   
       const options = {
         httpOnly: true,
-        secure: true,
-        maxAge: 0 // Set maxAge to 0 to delete the cookie
+        secure: false, // Set to false for local development
+        sameSite: 'Lax'// Set maxAge to 0 to delete the cookie
       };
   
       return res.status(200).clearCookie("accessToken", options).clearCookie("refreshToken", options).json(new ApiResponse(200, {}, "User  logged out"));
@@ -251,27 +277,36 @@ const LogoutUser  = asyncHandler(async (req, res) => {
     }
   });
 
-const UpdatePasswords=asyncHandler(async(req,res)=>
+  const UpdatePasswords = asyncHandler(async (req, res) => {
+    const { oldPassword, newPassword } = req.body;
+     console.log("old password",oldPassword);
+     console.log("new password",newPassword);
+    // Validate input
+    if (!oldPassword || !newPassword) {
+        throw new ApiError(400, "Both old and new passwords are required");
+    }
+    if(oldPassword===newPassword)
 {
-    const {oldPassword,NewPassword}=req.body;
-    const user=await User.findById(req.user._id)
+    throw new ApiError(402,"Old password and new password should not be same")
+}
 
-    if(!user)
-    {
-        throw new ApiError(404,"User not found")
-    }
-    const IsPassword= await user.isPasswordCorrect(oldPassword)
-    if(!IsPassword)
-    {
-        throw new ApiError(401,"Old Password is incorrect")
-    }
-    user.password=NewPassword;
-    user.save();
+    const user = await User.findById(req.user._id);
 
-    return res.status(200)
-    .json(new ApiResponse(200,{},"Password Changes Sucessfully"))
+    if (!user) {
+        throw new ApiError(404, "User not found");
+    }
+
+    const isPasswordValid = await user.isPasswordCorrect(oldPassword);
+    if (!isPasswordValid) {
+        throw new ApiError(401, "Old Password is incorrect");
+    }
+
+    // Hash the new password before saving
+    user.password = newPassword; // This will trigger the pre-save hook to hash the password
+    await user.save();
+
+    return res.status(200).json(new ApiResponse(200, {}, "Password changed successfully"));
 });
-
 
 const UpdateDetails=asyncHandler(async(req,res)=>
 {
