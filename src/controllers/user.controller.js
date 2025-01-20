@@ -310,10 +310,14 @@ const LogoutUser  = asyncHandler(async (req, res) => {
 
 const UpdateDetails=asyncHandler(async(req,res)=>
 {
-   const {fullName,email}=req.body;
-
+   const {username,email}=req.body;
+   console.log("username",username);
+   console.log("email",email);
+//    if (!username || !email) {
+//     throw new ApiError(400, "Both username and email are required");
+// }
    const user=await User.findById(req.user._id)
-   if(fullName===user.fullName && email===user.email)
+   if(username===user.username && email===user.email)
    {
        throw new ApiError(400,"No changes detected")
    }
@@ -326,7 +330,7 @@ const UpdateDetails=asyncHandler(async(req,res)=>
     {
         $set:
         {
-        fullName,  //update fullname
+        username,  //update fullname
         email   //update email
 
     }
