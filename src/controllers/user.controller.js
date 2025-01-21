@@ -181,7 +181,7 @@ const loginUser   = asyncHandler(async (req, res) => {
         sameSite: 'Lax',
         path: '/' 
     };
-    console.log('Setting cookies:', { AccessToken: accessToken, RefreshToken: refreshToken });
+    //console.log('Setting cookies:', { AccessToken: accessToken, RefreshToken: refreshToken });
 
     return res
         .status(200)
@@ -209,8 +209,8 @@ const LogoutUser  = asyncHandler(async (req, res) => {
       await User.findByIdAndUpdate(
         req.user._id,
         {
-          $set: {
-            refreshToken: undefined
+          $unset: {
+            refreshToken: 1,
           }
         },
         {
@@ -310,6 +310,7 @@ const LogoutUser  = asyncHandler(async (req, res) => {
 
 const UpdateDetails=asyncHandler(async(req,res)=>
 {
+    console.log("Enter UpdateDetails");
    const {username,email}=req.body;
    console.log("username",username);
    console.log("email",email);
@@ -354,7 +355,9 @@ const AvatarUpdate=asyncHandler(async(req,res)=>
     //   if (!req.file?.Avatar) {
     //     throw new ApiError(400, "File name should be 'Avatar'");
     //   }
+    
     const avatarLocalPath = req.file?.path
+    console.log(avatarLocalPath)
      if(!avatarLocalPath)
      {
         throw new ApiError(400,"Avatar image is required while updating")
@@ -538,5 +541,13 @@ const GetWatchHistory=asyncHandler(async(req,res)=>
     .json(new ApiResponse(200,user[0].watchHistory,"Watch History fetched successfully"))
 })
 
+const getUserDetails = asyncHandler(async (req, res) => {
+    // console.log("Enter getUserDetails")
+    const user = await User.findById(req.user._id).select("-password -refreshToken");
+    if (!user) {
+        throw new ApiError(404, "User not found");
+    }
+    return res.status(200).json(new ApiResponse(200, user, "User details fetched successfully"));
+});
 export { registerUser,loginUser,LogoutUser,RefreshAccessToken,UpdateDetails,
-    UpdatePasswords,AvatarUpdate,UpdateCoverImage,GetUserProfile,GetWatchHistory} ;
+    UpdatePasswords,AvatarUpdate,UpdateCoverImage,GetUserProfile,GetWatchHistory,getUserDetails} ;

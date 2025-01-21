@@ -14,7 +14,7 @@ const verifyJWT = (req, res, next) => {
         if (err) {
             return next(new ApiError(403, "Invalid access token"));
         }
-        console.log("decoded",decoded);
+        // console.log("decoded",decoded);
         req.user = decoded; // Attach user info to request object
         next(); // Proceed to the next middleware or route handler
     });
