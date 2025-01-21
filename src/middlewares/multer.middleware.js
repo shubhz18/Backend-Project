@@ -12,7 +12,9 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-  if (file.mimetype === 'image/jpeg' || file.mimetype === 'image/png') {
+  const allowedMimeTypes = ['image/jpeg', 'image/png', 'video/mp4', 'video/avi', 'video/mkv'];  // Add your desired video types here
+
+  if (allowedMimeTypes.includes(file.mimetype)) {
     console.log("File accepted:", file.originalname); // Log accepted files
     cb(null, true);
   } else {
@@ -21,8 +23,9 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
+
 export const upload = multer({
   storage,
   fileFilter,
-  limits: { fileSize: 1024 * 1024 * 5 } // 5MB file size limit
+  limits: { fileSize: 1024 * 1024 * 20 } // 5MB file size limit
 });

@@ -3,8 +3,10 @@ import { ApiError } from '../utils/ApiError.js';
 
 const verifyJWT = (req, res, next) => {
     console.log('Middleware hit');
-    console.log('Authorization Header:', req.headers.authorization); // Log the authorization header
-    const token = req.headers.authorization?.split(' ')[1]; // Access token from Authorization header
+    console.log('Authorization Header:', req.headers.authorization);
+     // Log the authorization header
+    const token = req.headers.authorization?.split(' ')[1] || req.cookies.AccessToken; 
+    console.log("token:",token) // Access token from Authorization header
 
     if (!token) {
         return next(new ApiError(401, "Access token is required"));
