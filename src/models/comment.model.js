@@ -8,7 +8,7 @@ const CommentSchema=new Schema(
         
         content:{
             type:String,
-            required
+            required:true
         },
         owner:
         {
@@ -27,6 +27,6 @@ const CommentSchema=new Schema(
 )
 
 
-videoSchema.plugin(mongooseAggregatePaginate)
+CommentSchema.plugin(mongooseAggregatePaginate)
 
 export const Comment=mongoose.model("Comment",CommentSchema)
