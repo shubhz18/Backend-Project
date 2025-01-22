@@ -1,7 +1,6 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { User } from "../models/user.model.js";
-
 import { upload } from "../middlewares/multer.middleware.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
@@ -114,7 +113,7 @@ const registerUser = asyncHandler(async (req, res) => {
     }
 
     const avatar = await uploadOnCloudinary(avatarLocalPath);
-    const coverImage = coverImageLocalPath ? await uploadOnCloudinasry(coverImageLocalPath) : null;
+    const coverImage = coverImageLocalPath ? await uploadOnCloudinary(coverImageLocalPath) : null;
 
     const user = await User.create({
         fullName: fullName,
@@ -309,6 +308,33 @@ const LogoutUser  = asyncHandler(async (req, res) => {
     return res.status(200).json(new ApiResponse(200, {}, "Password changed successfully"));
 });
 
+const addToWatchHistory=asyncHandler(async(req,res)=>
+{
+    console.log("enter the function")
+    const {video_Id  } = req.params;
+
+    if(!video_Id  )
+    {
+        throw new ApiError(400,"No video is found")
+    }
+    console.log(video_Id  );
+    console.log(req.user)
+    const user=await User.findById(req.user);
+
+    if(!user)
+    {
+        throw new ApiError(400,"User is not found")
+    }
+
+    if(!user.watchHistory.includes(video_Id  ))
+    {
+        user.watchHistory.push(video_Id );
+        await user.save();
+    }
+    
+    return res.status(200).json(200,"WatchHistory updated");
+})
+
 const UpdateDetails=asyncHandler(async(req,res)=>
 {
     console.log("Enter UpdateDetails");
@@ -415,14 +441,14 @@ return res.status(200)
 const GetUserProfile = asyncHandler(async (req, res) => {
     const { username } = req.params;
 
-    if (!username?.trim()) {
-        throw new ApiError(400, "User is not found");
+    if (!username) {
+        throw new ApiError(400, "Username is required");
     }
 
     const channel = await User.aggregate([
         {
             $match: {
-                username: username.toLowerCase()
+                username: { $regex: `^${username}$`, $options: "i" } // Case-insensitive matching
             }
         },
         {
@@ -430,6 +456,7 @@ const GetUserProfile = asyncHandler(async (req, res) => {
                 from: "subscriptions",
                 localField: "_id",
                 foreignField: "channel",
+                pipeline: [{ $project: { subscriber: 1 } }], // Only keep necessary fields
                 as: "Subscriber"
             }
         },
@@ -438,6 +465,7 @@ const GetUserProfile = asyncHandler(async (req, res) => {
                 from: "subscriptions",
                 localField: "_id",
                 foreignField: "subscriber",
+                pipeline: [{ $project: { channel: 1 } }], // Only keep necessary fields
                 as: "SubscribedTo"
             }
         },
@@ -447,7 +475,9 @@ const GetUserProfile = asyncHandler(async (req, res) => {
                 SubscribedToCount: { $size: "$SubscribedTo" },
                 IsSubscribed: {
                     $cond: {
-                        if: { $in: [req.user._id, "$Subscriber.subscriber"] },
+                        if: {
+                            $in: [req.user._id, "$Subscriber.subscriber"]
+                        },
                         then: true,
                         else: false
                     }
@@ -465,16 +495,19 @@ const GetUserProfile = asyncHandler(async (req, res) => {
                 email: 1,
                 IsSubscribed: 1
             }
-        }
+        },
+        { $limit: 1 } // Limit results to one document for efficiency
     ]);
 
-    if (!channel?.length) {
+    if (!channel.length) {
         throw new ApiError(404, "User not found");
     }
 
-    return res.status(200)
-        .json(new ApiResponse(200, channel[0], "User profile fetched successfully"));
+    return res.status(200).json(
+        new ApiResponse(200, channel[0], "User profile fetched successfully")
+    );
 });
+
 
 
 const GetWatchHistory = asyncHandler(async (req, res) => {
@@ -550,4 +583,4 @@ const getUserDetails = asyncHandler(async (req, res) => {
     return res.status(200).json(new ApiResponse(200, user, "User details fetched successfully"));
 });
 export { registerUser,loginUser,LogoutUser,RefreshAccessToken,UpdateDetails,
-    UpdatePasswords,AvatarUpdate,UpdateCoverImage,GetUserProfile,GetWatchHistory,getUserDetails} ;
+    UpdatePasswords,AvatarUpdate,UpdateCoverImage,GetUserProfile,GetWatchHistory,getUserDetails,addToWatchHistory} ;

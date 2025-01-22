@@ -18,6 +18,7 @@ const verifyJWT = (req, res, next) => {
         }
         // console.log("decoded",decoded);
         req.user = decoded; // Attach user info to request object
+        console.log(req.user);
         next(); // Proceed to the next middleware or route handler
     });
 };
