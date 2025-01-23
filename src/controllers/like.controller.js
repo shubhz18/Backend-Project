@@ -96,13 +96,76 @@ const getLikedVideos = asyncHandler(async (req, res) => {
     {
         throw new ApiError(400,"user has not liked any video")
     }
-
-    const VideoInfp=await Video.findById(likedVideo.video)
-    if(!VideoInfp)
+    const VideoInfo = await Like.aggregate([
+        {
+            $match: {
+                video: new mongoose.Types.ObjectId(likedVideo.video), // Ensure this is correct
+            },
+        },
+        {
+            $lookup: {
+                from: "videos",
+                let: { videoId: "$video" },
+                pipeline: [
+                    {
+                        $match: {
+                            $expr: { $eq: ["$_id", "$$videoId"] },
+                        },
+                    },
+                    {
+                        $lookup: {
+                            from: "users",
+                            let: { ownerId: "$owner" },
+                            pipeline: [
+                                {
+                                    $match: {
+                                        $expr: { $eq: ["$_id", "$$ownerId"] },
+                                    },
+                                },
+                            ],
+                            as: "UserDocx",
+                        },
+                    },
+                    {
+                        $unwind: "$UserDocx",
+                    },
+                    {
+                        $addFields: {
+                            VideoOwner: "$UserDocx.username",
+                        },
+                    },
+                    {
+                        $project: {
+                            VideoOwner: 1,
+                            video: 1,
+                            thumbnail: 1,
+                            description: 1,
+                            title: 1,
+                        },
+                    },
+                ],
+                as: "VideoDocx",
+            },
+        },
+        {
+            $unwind: "$VideoDocx",
+        },
+        {
+            $project: {
+                VideoOwner: "$VideoDocx.VideoOwner",
+                video: "$VideoDocx.video",
+                thumbnail: "$VideoDocx.thumbnail",
+                description: "$VideoDocx.description",
+                title: "$VideoDocx.title",
+            },
+        },
+    ]);
+   console.log(VideoInfo)
+    if(!VideoInfo)
     {
         throw new ApiError(400,"user liked video not found")
     }
-    return res.status(200).json(new ApiResponse(200,VideoInfp,"All user liked Video"))
+    return res.status(200).json(new ApiResponse(200,VideoInfo,"All user liked Video"))
 })
 
 export {
