@@ -10,7 +10,71 @@ import { response } from "express"
 
 const getAllVideos = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query
-    //TODO: get all videos based on query, sort, pagination
+    const user=await User.findById(req.user._id)
+    const video=await Video.findById(user._id)
+
+    // const video=await Video.find({owner:user})
+    const GetVideo = await Video.aggregate([
+        {
+          $match: {
+            owner: new mongoose.Types.ObjectId(user._id), // Match videos by owner
+          },
+        },
+        {
+          $lookup: {
+            from: "comments",
+            localField: "_id", // Video ID
+            foreignField: "video", // Comment's video reference
+            as: "comments",
+          },
+        },
+        {
+          $addFields: {
+            totalComments: { $size: "$comments" }, // Count comments
+          },
+        },
+        {
+          $lookup: {
+            from: "likes",
+            localField: "_id", // Video ID
+            foreignField: "video", // Like's video reference
+            as: "likes",
+          },
+        },
+        {
+          $addFields: {
+            totalLikes: { $size: "$likes" }, // Count likes
+          },
+        },
+        {
+              $lookup:
+              {
+                from:"users",
+                localField:"_id",
+                foreignField:"watchHistory",
+                as:"TotalViews"
+              }
+        },
+        {
+            $addFields: {
+                totalViews:{$size:"$TotalViews"}
+            }
+        },
+        {
+          $project: {
+            _id: 1, // Include video ID
+            title: 1, // Include video title if applicable
+            description: 1,
+            video:1,
+            thumbnail:1,
+            totalComments: 1,
+            totalLikes: 1,
+            totalViews:1
+          },
+        },
+      ]);
+    return res.status(200).json(new ApiResponse(200,GetVideo,"All the video of the user"))
+
 })
 
 const publishAVideo = asyncHandler(async (req, res) => {
